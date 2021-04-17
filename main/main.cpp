@@ -9,7 +9,7 @@ TODO
 * https://arduino-esp8266.readthedocs.io/en/latest/faq/a02-my-esp-crashes.html
 * https://github.com/alanesq/CameraWifiMotion/blob/master/CameraWifiMotion/CameraWifiMotion.ino
 * init Oled fails sometimes; does not occur if camera_init is removed
-* capture=1600x1200; pic in telegram:1280*960
+* capture=1600x1200; pic in :1280*960
 * zoek alle @@@
 * check project - low res AND/OR greyscale mov detection IN ESP
   ESP does lores motion detection (see https://eloquentarduino.github.io/2020/05/easier-faster-pure-video-esp32-cam-motion-detection/)
@@ -135,9 +135,9 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #define scl GPIO_NUM_22 //baswi changed from 19
 #define sda GPIO_NUM_21 //baswi changed from 18
 
-// Telegram Bot Token (Get from Botfather)
+// Bot Token (Get from Botfather)
 //@@@use this TLG_TOKEN
-#define TLG_TOKEN "1408233833:AAF-sXSWU9OrpKfVBB0eP8l7NiAeukizk9I"
+#define TLG_TOKEN "@@@"
 
 //baswi pins for TTGO T-camera
 #define CAM_PIN_PWDN    -1 //power down is not used
@@ -364,7 +364,7 @@ static void task_sendAlert2Telegram(void *ignore) {
                                   "Content-Disposition: form-data; name=\"photo\"; filename=\"photo.jpg\"\r\n"
                                   "Content-Type: image/jpeg\r\n\r\n");
         
-      ESP_ERROR_CHECK(esp_http_client_set_url(client, "https://api.telegram.org/bot674653520:AAERJg5chmEQyJRpQhG2Bpg-enFVUSAMNsI/sendPhoto?chat_id=573364432"));
+      ESP_ERROR_CHECK(esp_http_client_set_url(client, "@@@));
       ESP_ERROR_CHECK(esp_http_client_set_method(client, HTTP_METHOD_POST));
 
       char *boundary = "----baswiboundary127\r\n";
