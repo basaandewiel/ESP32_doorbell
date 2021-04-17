@@ -288,7 +288,7 @@ extern "C" {
 }
 
 #define SSID "netwerk2"
-#define PASSPHARSE "diepvriesnamanage667"
+#define PASSPHARSE "@@@"
 
 const int CONNECTED_BIT = BIT0;
 

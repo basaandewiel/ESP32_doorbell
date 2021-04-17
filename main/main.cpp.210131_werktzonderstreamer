@@ -217,7 +217,7 @@ extern "C" {
 }
 
 #define SSID "netwerk2"
-#define PASSPHARSE "diepvriesnamanage667"
+#define PASSPHARSE "@@@"
 
 static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
