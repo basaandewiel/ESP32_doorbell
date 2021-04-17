@@ -218,21 +218,9 @@ static camera_config_t camera_config = {
     //So, if you notice that the images taken with the ESP32-CAM are cut in half, or with strange colors, that’s probably a sign that you need to lower the quality (select a higher number).
     .fb_count = 1       //if more than one, i2s runs in continuous mode. Use only with JPEG
 };
-#define SSID "netwerk2" //@@@
-#define PASSPHARSE "@@@" //@@@
 
 static EventGroupHandle_t wifi_event_group;
 
-void wifi_connect(){
-    wifi_config_t cfg = {}; // must zero the structure, otherwise connect fails 
-
-    strcpy((char *) cfg.sta.ssid, SSID);
-    strcpy((char *) cfg.sta.password, PASSPHARSE);
-
-    ESP_ERROR_CHECK( esp_wifi_disconnect() );
-    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg) );
-    ESP_ERROR_CHECK( esp_wifi_connect() );
-}
 
 bool wifi_has_ip = false;
 bool sendAlert2Telegram = false;
@@ -300,9 +288,6 @@ static esp_err_t init_camera()
 extern "C" {
     #include <remote_log.h>
 }
-
-#define SSID "netwerk2"
-#define PASSPHARSE "@@@"
 
 const int CONNECTED_BIT = BIT0;
 
