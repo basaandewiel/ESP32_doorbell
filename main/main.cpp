@@ -220,7 +220,7 @@ static camera_config_t camera_config = {
     .fb_count = 1       //if more than one, i2s runs in continuous mode. Use only with JPEG
 };
 #define SSID "netwerk2" //@@@
-#define PASSPHARSE "diepvriesnamanage667" //@@@
+#define PASSPHARSE "@@@" //@@@
 
 static EventGroupHandle_t wifi_event_group;
 
@@ -303,7 +303,7 @@ extern "C" {
 }
 
 #define SSID "netwerk2"
-#define PASSPHARSE "diepvriesnamanage667"
+#define PASSPHARSE "@@@"
 
 const int CONNECTED_BIT = BIT0;
 
@@ -1085,7 +1085,7 @@ static void configure_PIR(void)
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
 #define EXAMPLE_ESP_WIFI_SSID      "netwerk2"
-#define EXAMPLE_ESP_WIFI_PASS      "diepvriesnamanage667"
+#define EXAMPLE_ESP_WIFI_PASS      "@@@"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  "5"
 
 /* FreeRTOS event group to signal when we are connected*/
