@@ -1084,7 +1084,7 @@ static void configure_PIR(void)
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
 #define EXAMPLE_ESP_WIFI_SSID      "netwerk2"
-#define EXAMPLE_ESP_WIFI_PASS      "diepvriesnamanage667"
+#define EXAMPLE_ESP_WIFI_PASS      "@@@"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
 /* FreeRTOS event group to signal when we are connected*/
