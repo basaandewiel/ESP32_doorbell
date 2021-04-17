@@ -112,7 +112,6 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #include "freertos/event_groups.h"
 
 #include "esp_http_client.h"
-#include "protocol_examples_common.h"
 #include "esp_tls.h"
 #include "esp_http_server.h"
 #include "time.h"
@@ -123,7 +122,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
-#include "addr_from_stdin.h"
+//#include "addr_from_stdin.h"
 
 //OLED
 #include "Display.h"
@@ -1085,8 +1084,8 @@ static void configure_PIR(void)
    the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
 */
 #define EXAMPLE_ESP_WIFI_SSID      "netwerk2"
-#define EXAMPLE_ESP_WIFI_PASS      "@@@"
-#define EXAMPLE_ESP_MAXIMUM_RETRY  "5"
+#define EXAMPLE_ESP_WIFI_PASS      "diepvriesnamanage667"
+#define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
@@ -1163,22 +1162,15 @@ void wifi_init_sta(void)
                                                         &event_handler,
                                                         NULL,
                                                         &instance_got_ip));
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASS,
-            /* Setting a password implies station will connect to all security modes including WEP/WPA.
-             * However these modes are deprecated and not advisable to be used. Incase your Access point
-             * doesn't support WPA2, these mode can be enabled by commenting below line */
-	     .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-
-            .pmf_cfg = {
-                .capable = true,
-                .required = false
-            },
-        },
-    };
+    wifi_config_t wifi_config = {}; //will not connect otherwise 
+    strcpy((char *) wifi_config.sta.ssid, EXAMPLE_ESP_WIFI_SSID); //C++ does not allow conversion from cons string to unin8[32]
+    strcpy((char *) wifi_config.sta.password, EXAMPLE_ESP_WIFI_PASS);
+    /* Setting a password implies station will connect to all security modes including WEP/WPA.
+     * However these modes are deprecated and not advisable to be used. Incase your Access point
+     * doesn't support WPA2, these mode can be enabled by commenting below line */
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    wifi_config.sta.pmf_cfg.capable = true;
+    wifi_config.sta.pmf_cfg.required = false;
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start() );
