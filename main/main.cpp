@@ -135,9 +135,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #define scl GPIO_NUM_22 //baswi changed from 19
 #define sda GPIO_NUM_21 //baswi changed from 18
 
-// Bot Token (Get from Botfather)
-//@@@use this TLG_TOKEN
-#define TLG_TOKEN "@@@bot667"
+#include "privat.h" //include private defines, in .gitignore@@@
 
 //baswi pins for TTGO T-camera
 #define CAM_PIN_PWDN    -1 //power down is not used
@@ -364,7 +362,7 @@ static void task_sendAlert2Telegram(void *ignore) {
                                   "Content-Disposition: form-data; name=\"photo\"; filename=\"photo.jpg\"\r\n"
                                   "Content-Type: image/jpeg\r\n\r\n");
         
-      ESP_ERROR_CHECK(esp_http_client_set_url(client, "@@@));
+      ESP_ERROR_CHECK(esp_http_client_set_url(client, TLG_URL));
       ESP_ERROR_CHECK(esp_http_client_set_method(client, HTTP_METHOD_POST));
 
       char *boundary = "----baswiboundary127\r\n";
@@ -1062,15 +1060,6 @@ static void configure_PIR(void)
     }
   ESP_LOGI(TAG, "PIR Interrupt configured\n");
 }
-
-/* The examples use WiFi configuration that you can set via project configuration menu
-
-   If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
-*/
-#define EXAMPLE_ESP_WIFI_SSID      "netwerk2"
-#define EXAMPLE_ESP_WIFI_PASS      "@@@"
-#define EXAMPLE_ESP_MAXIMUM_RETRY  5
 
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
