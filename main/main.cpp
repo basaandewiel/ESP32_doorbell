@@ -137,7 +137,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 
 // Bot Token (Get from Botfather)
 //@@@use this TLG_TOKEN
-#define TLG_TOKEN "@@@"
+#define TLG_TOKEN "@@@bot667"
 
 //baswi pins for TTGO T-camera
 #define CAM_PIN_PWDN    -1 //power down is not used
