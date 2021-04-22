@@ -2,7 +2,6 @@
 Streaming webserver code copied en bewerkt from: https://github.com/jameszah/ESP32-CAM-Video-Recorder-junior/blob/master/ESP32-CAM-Video-Recorder-junior-10x.ino
 
 TODO
-* connect to wifi, zonder example code
 * wifi provisioning, https://docs.espressif.com/projects/esp-jumpstart/en/latest/index.html
   * complexe (grote code) en additional phone app nodig; ik wil gewoon simpele AP met webinterface
 * https://github.com/espressif/esp-idf/issues/1503
@@ -77,7 +76,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 */
 
 #include <esp_event.h>
-#define LOG_LOCAL_LEVEL ESP_LOG_ERROR //default log level, must placed before include
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO //default log level, must placed before include
 #include <esp_log.h>
 #include <esp_system.h>
 #include <nvs_flash.h>
@@ -288,18 +287,6 @@ extern "C" {
 }
 
 const int CONNECTED_BIT = BIT0;
-
-/*void wifi_connect(){
-    wifi_config_t cfg = {}; // must zero the structure, otherwise connect fails 
-
-    strcpy((char *) cfg.sta.ssid, SSID);
-    strcpy((char *) cfg.sta.password, PASSPHARSE);
-
-    ESP_ERROR_CHECK( esp_wifi_disconnect() );
-    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg) );
-    ESP_ERROR_CHECK( esp_wifi_connect() );
-}*/
-
 
 static void task_sendAlert2Telegram(void *ignore) {
   for (;;) {
@@ -758,10 +745,40 @@ esp_err_t rebootESP (httpd_req_t *req)
 	return ESP_OK;
 }
 
+/* An HTTP GET handler */
+static esp_err_t setWifiParams (httpd_req_t *req)
+{
+  ESP_LOGI(TAG, "setWifiParams");
+  char*  buf;
+  size_t buf_len;
+
+  /* Read URL query string length and allocate memory for length + 1,
+   * extra byte for null termination */
+  buf_len = httpd_req_get_url_query_len(req) + 1;
+  if (buf_len > 1) {
+    buf = (char *) malloc(buf_len);
+    if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+      ESP_LOGI(TAG, "Found URL query => %s", buf);
+      char ssid[32]; //%%%
+      char passkey[32];
+      // Get value of expected key from query string
+      if (httpd_query_key_value(buf, "ssid", ssid, sizeof(ssid)) == ESP_OK) {
+        ESP_LOGI(TAG, "Found network SSID =%s", ssid);
+      }
+      if (httpd_query_key_value(buf, "passkey", passkey, sizeof(passkey)) == ESP_OK) {
+        ESP_LOGI(TAG, "Found network PASSKEY =%s", passkey);
+      }
+    }
+    free(buf);
+  }
+  return ESP_OK;
+}
+
 
 /* An HTTP GET handler */
 static esp_err_t SetLogLevel (httpd_req_t *req)
 {
+  esp_log_level_set("*", ESP_LOG_DEBUG);
   ESP_LOGI(TAG, "setloglevel*");
     char*  buf;
     size_t buf_len;
@@ -910,12 +927,13 @@ void startCameraServer() {
 	  .user_ctx = NULL
   };
 
-  httpd_uri_t setloglevel_uri = {
+  httpd_uri_t setWifiParams_uri = {
 	  .uri	  = "/control",
 	  .method   = HTTP_GET,
-	  .handler  = SetLogLevel,
-	  .user_ctx = (void *) "Hello Bassie" //is returned after get; 
-    //if nothing is returned then maxfd increases till 64 => crash
+	  .handler  = setWifiParams,
+//for POST	  .user_ctx = NULL
+    .user_ctx = (void *) "Hello Bassie" //is returned after get; 
+    //GET: if nothing is returned then maxfd increases till 64 => crash
   };
 
   if (httpd_start(&camera_httpd, &config) == ESP_OK) {
@@ -926,7 +944,7 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &update_post);
     httpd_register_uri_handler(camera_httpd, &sendtelegram_uri);
     httpd_register_uri_handler(camera_httpd, &reboot_uri);
-    httpd_register_uri_handler(camera_httpd, &setloglevel_uri);
+    httpd_register_uri_handler(camera_httpd, &setWifiParams_uri);
   }
   ESP_LOGI(TAG, "HTTP server started");
 }
@@ -1094,8 +1112,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void initialise_wifi(void)
-//  ESP_ERROR_CHECK(esp_netif_init());
+static void initialise_wifi(void) //%%%@@@ THIS FUNCTION IS NOT CALLED
 //  ESP_ERROR_CHECK(esp_event_loop_create_default());
 {
     esp_log_level_set("wifi", ESP_LOG_NONE); // disable wifi driver logging
@@ -1110,6 +1127,7 @@ static void initialise_wifi(void)
     if(ret != ESP_OK ){
       ESP_LOGE(TAG,"failed to set hostname:%d",ret);  
     }
+    //%%%
 }
 
 void wifi_init_sta(void)
@@ -1175,11 +1193,40 @@ void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group);
+
+    //@@@test whether wifi config is stored in NVS
+    wifi_interface_t interface;
+    // I ran into the same problem to find out that it's not possible to check the success of loading wifi_config from the nvs with checking the return value.
+    //I solved the problem by checking the string length of the data coming from the NVS which is typically filled up with 0xff after erasing the flash.
+
+    esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &wifi_config);
+    //You could check if more values are set but I figured out that only ssid
+    //or password is necessary to check against
+    
+    const char * const_ssid = (char *)&wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+    const char * const_password = (char *)&wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+
+    if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
+      ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");    
+    } else {
+      //use sucessfully retreived wifi_config
+      //esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+      ESP_LOGI(TAG, "Wifi configuration already stored in flash partition called NVS");
+      ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
+      ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
+    }
+
 }
 
 
 extern "C" {
    void app_main();
+}
+
+bool WifiCredentialsInSPIFFS()
+{
+  //@@@to be filled
+  return false;
 }
 
 void app_main()
@@ -1190,14 +1237,18 @@ void app_main()
   init_ota();  
   init_NVS();
 
+//  IF (WifiCredentialsInSPIFFS() == false) {
+    //wifiSoftAP(); //set wifi AP
+    //start_http_server; //with one URI /control
+    //set ssid and password and store in SPIFFS
+//  }
+  //wifiSetSTA(); //read credentials from SPIFFS
+  //start_http_server; with normal working uri's
+
   wifi_init_sta();
 
 //  ESP_ERROR_CHECK(esp_netif_init());
 //  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-   * see examples/protocols/README.md 
-   */
-//  ESP_ERROR_CHECK(example_connect());
   wifi_has_ip = true;
   sprintf(localip, "192.168.1.165"); //@@@should not be hard coded
   //ESP_LOGI(TAG, "Connected to AP");
@@ -1290,7 +1341,7 @@ void app_main()
   //@@@esp_ota_mark_app_valid_cancel_rollback(); //set image valid
 
   esp_log_level_set("*", ESP_LOG_ERROR);   // set all components to ERROR level
-  esp_log_level_set(TAG, ESP_LOG_INFO);
+  esp_log_level_set("*", ESP_LOG_INFO);
 }
 
 
