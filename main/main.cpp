@@ -1115,31 +1115,55 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
 void wifi_init_sta(void)
 {
-    s_wifi_event_group = xEventGroupCreate();
+  s_wifi_event_group = xEventGroupCreate();
 
-    ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_netif_init());
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_create_default_wifi_sta();
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+  esp_event_handler_instance_t instance_any_id;
+  esp_event_handler_instance_t instance_got_ip;
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         ESP_EVENT_ANY_ID,
                                                         &event_handler,
                                                         NULL,
                                                         &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
                                                         IP_EVENT_STA_GOT_IP,
                                                         &event_handler,
                                                         NULL,
                                                         &instance_got_ip));
-    wifi_config_t wifi_config = {}; //will not connect otherwise 
-    strcpy((char *) wifi_config.sta.ssid, EXAMPLE_ESP_WIFI_SSID); //C++ does not allow conversion from cons string to unin8[32]
-    strcpy((char *) wifi_config.sta.password, EXAMPLE_ESP_WIFI_PASS);
+  wifi_config_t wifi_config = {}; //will not connect otherwise 
+
+  //test whether wifi config is stored in NVS
+  wifi_interface_t interface;
+  // result of esp_wifi_get_config does not mean whether wifi credentials are stored in NVS or not
+  // you should check the string length of the data coming from the NVS which is typically filled up with 0xff after erasing the flash.
+  esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &wifi_config);
+  
+  //You could check if more values are set but only ssid or password is necessary to check against
+  const char * const_ssid = (char *)&wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  const char * const_password = (char *)&wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+
+  if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
+    ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");
+    //@@@start SoftAP
+    //start_http_server; //with one URI /control
+  } else {
+    ESP_LOGI(TAG, "Wifi configuration stored in NVS will be used");
+  }
+
+  //    strcpy((char *) wifi_config.sta.ssid, EXAMPLE_ESP_WIFI_SSID); //C++ does not allow conversion from cons string to unin8[32]
+  //    strcpy((char *) wifi_config.sta.password, EXAMPLE_ESP_WIFI_PASS);
+  ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
+  ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
+
+    //read and use wifi credentials from NVS
+    esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     /* Setting a password implies station will connect to all security modes including WEP/WPA.
      * However these modes are deprecated and not advisable to be used. Incase your Access point
      * doesn't support WPA2, these mode can be enabled by commenting below line */
@@ -1176,28 +1200,6 @@ void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group);
-
-    //@@@test whether wifi config is stored in NVS
-    wifi_interface_t interface;
-    // I ran into the same problem to find out that it's not possible to check the success of loading wifi_config from the nvs with checking the return value.
-    //I solved the problem by checking the string length of the data coming from the NVS which is typically filled up with 0xff after erasing the flash.
-
-    esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &wifi_config);
-    //You could check if more values are set but I figured out that only ssid
-    //or password is necessary to check against
-    
-    const char * const_ssid = (char *)&wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
-    const char * const_password = (char *)&wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
-
-    if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
-      ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");    
-    } else {
-      //use sucessfully retreived wifi_config
-      //esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-      ESP_LOGI(TAG, "Wifi configuration already stored in flash partition called NVS");
-      ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
-      ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
-    }
 }
 
 
@@ -1219,15 +1221,8 @@ void app_main()
   init_ota();  
   init_NVS();
 
-//  IF (WifiCredentialsInSPIFFS() == false) {
-    //wifiSoftAP(); //set wifi AP
-    //start_http_server; //with one URI /control
-    //set ssid and password and store in SPIFFS
-//  }
-  //wifiSetSTA(); //read credentials from SPIFFS
+  wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
   //start_http_server; with normal working uri's
-
-  wifi_init_sta();
 
 //  ESP_ERROR_CHECK(esp_netif_init());
 //  ESP_ERROR_CHECK(esp_event_loop_create_default());
