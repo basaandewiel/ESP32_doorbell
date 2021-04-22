@@ -1112,23 +1112,6 @@ static void event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-static void initialise_wifi(void) //%%%@@@ THIS FUNCTION IS NOT CALLED
-//  ESP_ERROR_CHECK(esp_event_loop_create_default());
-{
-    esp_log_level_set("wifi", ESP_LOG_NONE); // disable wifi driver logging
-    //tcpip_adapter_init();//@@@deprecated
-    ESP_ERROR_CHECK(esp_netif_init());
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK( esp_wifi_start() );
-    esp_err_t ret = tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA ,"icircuit");
-    if(ret != ESP_OK ){
-      ESP_LOGE(TAG,"failed to set hostname:%d",ret);  
-    }
-    //%%%
-}
 
 void wifi_init_sta(void)
 {
@@ -1215,7 +1198,6 @@ void wifi_init_sta(void)
       ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
       ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
     }
-
 }
 
 
