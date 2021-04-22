@@ -160,6 +160,31 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #define BUTTON_PRESSED 1 //value put in gpio_queue when button interrupt occurs
 #define PIR_ACTIVATED  2 //value put in gpio_queue when PIR interrupt occurs
 
+//defines forSoftAP
+   #define SOFT_AP_SSID "ESP32 SoftAP"
+    #define SOFT_AP_PASSWORD "Password"
+     
+    #define SOFT_AP_IP_ADDRESS_1 192
+    #define SOFT_AP_IP_ADDRESS_2 168
+    #define SOFT_AP_IP_ADDRESS_3 5
+    #define SOFT_AP_IP_ADDRESS_4 18
+     
+    #define SOFT_AP_GW_ADDRESS_1 192
+    #define SOFT_AP_GW_ADDRESS_2 168
+    #define SOFT_AP_GW_ADDRESS_3 5
+    #define SOFT_AP_GW_ADDRESS_4 20
+     
+    #define SOFT_AP_NM_ADDRESS_1 255
+    #define SOFT_AP_NM_ADDRESS_2 255
+    #define SOFT_AP_NM_ADDRESS_3 255
+    #define SOFT_AP_NM_ADDRESS_4 0
+     
+    #define SERVER_PORT 80
+    #define HTTP_METHOD HTTP_POST
+    #define URI_STRING "/test"
+ 
+
+
 static const char *TAG = "***";
 static void obtain_time(void);
 static void initialize_sntp(void);
