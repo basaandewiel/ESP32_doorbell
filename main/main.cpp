@@ -172,7 +172,8 @@ static void obtain_time(void);
 static void initialize_sntp(void);
 time_t now;
 char localip[20];
-wifi_config_t glob_wifi_config; //used to store wifi_config to connect to network
+wifi_config_t glob_wifi_config = {}; //used to store wifi_config to connect to network
+bool network_credentials_sta_set = false; //to indicated whether wifi creds are retrieved via SoftAP
 char taglevel[32] = "***";
 
 static void http_cleanup(esp_http_client_handle_t client)
@@ -778,6 +779,8 @@ static esp_err_t setWifiParams (httpd_req_t *req)
         ESP_LOGI(TAG, "Found network PASSKEY =%s", passkey);
         strcpy((char *) glob_wifi_config.sta.password, passkey); //C++ does not allow conversion from char[32] to unint8_t[32]
       }
+      //assume both ssid and passw are correctly set
+      network_credentials_sta_set = true;
     }
     free(buf);
   }
@@ -1230,23 +1233,22 @@ void wifi_init_sta(void)
                                                         &event_handler,
                                                         NULL,
                                                         &instance_got_ip));
-  wifi_config_t wifi_config = {}; //will not connect otherwise 
-
+  //wifi_config_t wifi_config = {}; //will not connect otherwise //use global var
+// use ssid and passw from glob_wifi_conf
   //    strcpy((char *) wifi_config.sta.ssid, EXAMPLE_ESP_WIFI_SSID); //C++ does not allow conversion from cons string to unin8[32]
   //    strcpy((char *) wifi_config.sta.password, EXAMPLE_ESP_WIFI_PASS);
-  ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
-  ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
+  //ESP_LOGI(TAG, "%s" ,wifi_config.sta.ssid);
+  //ESP_LOGI(TAG, "%s" ,wifi_config.sta.password);
 
-    //read and use wifi credentials from NVS
-    esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+    esp_wifi_set_config(WIFI_IF_STA, &glob_wifi_config);
     /* Setting a password implies station will connect to all security modes including WEP/WPA.
      * However these modes are deprecated and not advisable to be used. Incase your Access point
      * doesn't support WPA2, these mode can be enabled by commenting below line */
-    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-    wifi_config.sta.pmf_cfg.capable = true;
-    wifi_config.sta.pmf_cfg.required = false;
+    glob_wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    glob_wifi_config.sta.pmf_cfg.capable = true;
+    glob_wifi_config.sta.pmf_cfg.required = false;
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &glob_wifi_config) );
     ESP_ERROR_CHECK(esp_wifi_start() );
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
@@ -1274,7 +1276,7 @@ void wifi_init_sta(void)
     /* The event will not be processed after unregister */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
-    vEventGroupDelete(s_wifi_event_group);
+    vEventGroupDelete(s_wifi_event_group); //%%%also to be done in softAP%%%
 }
 
 
@@ -1291,18 +1293,17 @@ void app_main()
   init_ota();  
   init_NVS();
 
-  if (wifi_credentials_stored_in_NVS()) {
-    wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
-    //start_http_server; with normal working uri's
-  } else {
+  if (!wifi_credentials_stored_in_NVS()) {
     //start softAP; and get ssid en password; they are stored in glob_wifi_config;
     wifi_init_softap();
-    //start_http_server; //with one URI /control
+    while (network_credentials_sta_set == false) {
+      vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
+    // network credentials received via webpage
   }
+  // COND: either wifi credentials in NVS were valid, or are supplied via softAP
+  wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
 
-
-//  ESP_ERROR_CHECK(esp_netif_init());
-//  ESP_ERROR_CHECK(esp_event_loop_create_default());
   wifi_has_ip = true;
   sprintf(localip, "192.168.1.165"); //@@@should not be hard coded
   //ESP_LOGI(TAG, "Connected to AP");
