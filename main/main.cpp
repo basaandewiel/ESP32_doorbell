@@ -767,14 +767,16 @@ static esp_err_t setWifiParams (httpd_req_t *req)
     buf = (char *) malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
       ESP_LOGI(TAG, "Found URL query => %s", buf);
-      char ssid[32]; //%%%
+      char ssid[32];
       char passkey[32];
       // Get value of expected key from query string
       if (httpd_query_key_value(buf, "ssid", ssid, sizeof(ssid)) == ESP_OK) {
         ESP_LOGI(TAG, "Found network SSID =%s", ssid);
+        strcpy((char *) glob_wifi_config.sta.ssid, ssid); //C++ does not allow conversion from char[32] to unint8_t[32]
       }
       if (httpd_query_key_value(buf, "passkey", passkey, sizeof(passkey)) == ESP_OK) {
         ESP_LOGI(TAG, "Found network PASSKEY =%s", passkey);
+        strcpy((char *) glob_wifi_config.sta.password, passkey); //C++ does not allow conversion from char[32] to unint8_t[32]
       }
     }
     free(buf);
