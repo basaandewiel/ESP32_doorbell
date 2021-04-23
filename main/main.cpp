@@ -1169,7 +1169,8 @@ bool wifi_credentials_stored_in_NVS()
   //when credentials are valid, they are copied in glob_wifi_config
   wifi_interface_t interface;
   // result of esp_wifi_get_config does not mean whether wifi credentials are stored in NVS or not
-  // you should check the string length of the data coming from the NVS which is typically filled up with 0xff after erasing the flash.
+  // you should check the string length of the data coming from the NVS which is typically random
+  // 210423 add check whether ssid and password contain only printable characters
   esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &glob_wifi_config);
   
   //You could check if more values are set but only ssid or password is necessary to check against
@@ -1180,6 +1181,23 @@ bool wifi_credentials_stored_in_NVS()
     ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");
     return false;
   } else {
+    for (int i = 0; i<32; i++)
+    {
+        if (!isalnum(const_ssid[i]))
+        {
+          ESP_LOGI(TAG, "ssid in NVS contains non printable chars");
+          return false;
+        }
+    }
+    for (int i = 0; i<64; i++)
+    {
+        if (!isalnum(const_password[i]))
+        {
+          ESP_LOGI(TAG, "passwd in NVS contains non printable chars");
+          return false;
+        }
+    }
+    //COND: ssid and passwd have both not length zero, and both don't contain non printable chars
     ESP_LOGI(TAG, "Wifi configuration stored in NVS will be used: %s, %s", const_ssid, const_password);
     return true;
   }
