@@ -172,6 +172,7 @@ static void obtain_time(void);
 static void initialize_sntp(void);
 time_t now;
 char localip[20];
+wifi_config_t glob_wifi_config; //used to store wifi_config to connect to network
 char taglevel[32] = "***";
 
 static void http_cleanup(esp_http_client_handle_t client)
@@ -1165,15 +1166,15 @@ void wifi_init_softap(void)
 bool wifi_credentials_stored_in_NVS()
 {
   //test whether wifi config is stored in NVS
+  //when credentials are valid, they are copied in glob_wifi_config
   wifi_interface_t interface;
-  wifi_config_t wifi_config;
   // result of esp_wifi_get_config does not mean whether wifi credentials are stored in NVS or not
   // you should check the string length of the data coming from the NVS which is typically filled up with 0xff after erasing the flash.
-  esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &wifi_config);
+  esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &glob_wifi_config);
   
   //You could check if more values are set but only ssid or password is necessary to check against
-  const char * const_ssid = (char *)&wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
-  const char * const_password = (char *)&wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  const char * const_ssid = (char *)&glob_wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  const char * const_password = (char *)&glob_wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
 
   if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
     ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");
@@ -1261,11 +1262,6 @@ extern "C" {
    void app_main();
 }
 
-bool WifiCredentialsInSPIFFS()
-{
-  //@@@to be filled
-  return false;
-}
 
 void app_main()
 {
@@ -1276,11 +1272,10 @@ void app_main()
   init_NVS();
 
   if (wifi_credentials_stored_in_NVS()) {
-//    wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
-  wifi_init_softap();
+    wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
     //start_http_server; with normal working uri's
   } else {
-    //start softAP; and get ssid en password to be used to connect to network
+    //start softAP; and get ssid en password; they are stored in glob_wifi_config;
     wifi_init_softap();
     //start_http_server; //with one URI /control
   }
