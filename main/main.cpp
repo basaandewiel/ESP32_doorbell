@@ -1142,20 +1142,20 @@ void wifi_init_softap(void)
                                                         NULL,
                                                         NULL));
     
-    wifi_config_t wifi_config = {};
-    strcpy((char *) wifi_config.ap.ssid, ESP_WIFI_SOFTAP_SSID); //C++ does not allow conversion from cons string to unin8[32]   
-    wifi_config.ap.ssid_len = strlen(ESP_WIFI_SOFTAP_SSID);
-    wifi_config.ap.channel = ESP_WIFI_SOFTAP_CHANNEL;
-    strcpy((char *) wifi_config.ap.password, ESP_WIFI_SOFTAP_PASS);
-    wifi_config.ap.max_connection = ESP_WIFI_SOFTAP_MAX_STA_CONN;
-    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    wifi_config_t soft_ap_wifi_config = {};
+    strcpy((char *) soft_ap_wifi_config.ap.ssid, ESP_WIFI_SOFTAP_SSID); //C++ does not allow conversion from cons string to unin8[32]   
+    soft_ap_wifi_config.ap.ssid_len = strlen(ESP_WIFI_SOFTAP_SSID);
+    soft_ap_wifi_config.ap.channel = ESP_WIFI_SOFTAP_CHANNEL;
+    strcpy((char *) soft_ap_wifi_config.ap.password, ESP_WIFI_SOFTAP_PASS);
+    soft_ap_wifi_config.ap.max_connection = ESP_WIFI_SOFTAP_MAX_STA_CONN;
+    soft_ap_wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
 
     if (strlen(ESP_WIFI_SOFTAP_PASS) == 0) {
-        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+        soft_ap_wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     }
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &soft_ap_wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
@@ -1280,6 +1280,7 @@ void app_main()
   wifi_init_softap();
     //start_http_server; with normal working uri's
   } else {
+    //start softAP; and get ssid en password to be used to connect to network
     wifi_init_softap();
     //start_http_server; //with one URI /control
   }
