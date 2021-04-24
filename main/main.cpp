@@ -4,6 +4,8 @@ Streaming webserver code copied en bewerkt from: https://github.com/jameszah/ESP
 TODO
 * wifi provisioning, https://docs.espressif.com/projects/esp-jumpstart/en/latest/index.html
   * complexe (grote code) en additional phone app nodig; ik wil gewoon simpele AP met webinterface
+* AI on EPS32: https://github.com/fustyles/Arduino/blob/master/ESP32-CAM_Tensorflow.js/ESP32-CAM_teachablemachine/ESP32-CAM_teachablemachine.ino
+* AI person detection: https://diyprojects.io/tensorflow-lite-micro-is-available-for-esp32-and-esp32-eye-esp32-cam/
 * https://github.com/espressif/esp-idf/issues/1503
 * https://arduino-esp8266.readthedocs.io/en/latest/faq/a02-my-esp-crashes.html
 * https://github.com/alanesq/CameraWifiMotion/blob/master/CameraWifiMotion/CameraWifiMotion.ino
@@ -42,7 +44,7 @@ TODO
       nvs_flash_erase();
       esp_restart();
     }
-* custom watchdog - if no internet connection for x seconds ->reboot
+* custom watchdog - if no internet connection for x seconds; wrsch beter aan wifi_event_handler koppelen
 * maak code netjes
 
 Kconfig setup
@@ -174,6 +176,7 @@ time_t now;
 char localip[20];
 wifi_config_t glob_wifi_config = {}; //used to store wifi_config to connect to network
 bool network_credentials_sta_set = false; //to indicated whether wifi creds are retrieved via SoftAP
+esp_netif_t * esp_netif_handler;
 char taglevel[32] = "***";
 
 static void http_cleanup(esp_http_client_handle_t client)
@@ -1136,17 +1139,17 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 void wifi_init_softap(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_ap();
+    //ESP_ERROR_CHECK(esp_event_loop_create_default()); 
+    esp_netif_handler = esp_netif_create_default_wifi_ap();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &event_handler,
-                                                        NULL,
-                                                        NULL));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, //called once in main
+    //                                                    ESP_EVENT_ANY_ID,
+    //                                                    &event_handler,
+    //                                                    NULL,
+    //                                                    NULL));
     
     wifi_config_t soft_ap_wifi_config = {};
     strcpy((char *) soft_ap_wifi_config.ap.ssid, ESP_WIFI_SOFTAP_SSID); //C++ does not allow conversion from cons string to unin8[32]   
@@ -1215,7 +1218,7 @@ void wifi_init_sta(void)
 
   ESP_ERROR_CHECK(esp_netif_init());
 
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+//  ESP_ERROR_CHECK(esp_event_loop_create_default()); //when executed afer wifi_init_softap create_default is called twice ->panci
   esp_netif_create_default_wifi_sta();
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -1223,11 +1226,11 @@ void wifi_init_sta(void)
 
   esp_event_handler_instance_t instance_any_id;
   esp_event_handler_instance_t instance_got_ip;
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &event_handler,
-                                                        NULL,
-                                                        &instance_any_id));
+  //ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, //called once in main
+  //                                                      ESP_EVENT_ANY_ID,
+  //                                                      &event_handler,
+  //                                                      NULL,
+  //                                                      &instance_any_id));
   ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
                                                         IP_EVENT_STA_GOT_IP,
                                                         &event_handler,
@@ -1275,9 +1278,9 @@ void wifi_init_sta(void)
 
     /* The event will not be processed after unregister */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
+    //ESP_ERROR_CHECK(esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, instance_any_id));
     vEventGroupDelete(s_wifi_event_group); //%%%also to be done in softAP%%%
-}
+} //wifi_init_sta
 
 
 extern "C" {
@@ -1293,13 +1296,33 @@ void app_main()
   init_ota();  
   init_NVS();
 
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                      ESP_EVENT_ANY_ID,
+                                                      &event_handler,
+                                                      NULL,
+                                                      NULL));
+
   if (!wifi_credentials_stored_in_NVS()) {
     //start softAP; and get ssid en password; they are stored in glob_wifi_config;
     wifi_init_softap();
+    //start httpd server, so that wifi creds can be inputted
+    startCameraServer(); //camera streaming server; framebuffer is used in sendalert2telegram, so stream URL MUST be activated (fi via browser)
+    //baswi replaced ps_malloc by malloc; so probably not in PSRAM, seen https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
+    //Because in settings (SDK config editor) " make ram allocatable by malloc" this is OK
+    //baswi remove type cast from (uint8_t*)malloc
+    //  framebuffer = (uint8_t*)malloc(size_t(512 * 1024)); // buffer to store a jpg in motion
+    //  framebuffer = (uint8_t*)malloc(size_t(1200 * 1600)); // changed size to UXVGA, 1600x1200
+    framebuffer = (uint8_t*)malloc(size_t(1600 * 1200)); // changed size to UXVGA, 1600x1200 = 1,9 MB; SKD config editor: max 16K placed in
+    //internal RAM, if bigger then in SPIRAM (=PSRAM)
+
     while (network_credentials_sta_set == false) {
       vTaskDelay(1000/portTICK_PERIOD_MS);
     }
     // network credentials received via webpage
+    //unregister and destory netif object, because sta uses other netif object
+    esp_wifi_clear_default_wifi_driver_and_handlers(esp_netif_handler); //unregister default wifi handlers and detach the created object from the wifi
+    esp_netif_destroy(esp_netif_handler); //To destroy the esp_netif object.
   }
   // COND: either wifi credentials in NVS were valid, or are supplied via softAP
   wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
@@ -1381,16 +1404,6 @@ void app_main()
 
   //configure_PIR(); //do not configure PIR interrupt, because it gives false positives
   
-
-  startCameraServer(); //camera streaming server; framebuffer is used in sendalert2telegram, so stream URL MUST be activated (fi via browser)
-//baswi replaced ps_malloc by malloc; so probably not in PSRAM, seen https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
-//Because in settings (SDK config editor) " make ram allocatable by malloc" this is OK
-//baswi remove type cast from (uint8_t*)malloc
-//  framebuffer = (uint8_t*)malloc(size_t(512 * 1024)); // buffer to store a jpg in motion
-//  framebuffer = (uint8_t*)malloc(size_t(1200 * 1600)); // changed size to UXVGA, 1600x1200
-  framebuffer = (uint8_t*)malloc(size_t(1600 * 1200)); // changed size to UXVGA, 1600x1200 = 1,9 MB; SKD config editor: max 16K placed in
-  //internal RAM, if bigger then in SPIRAM (=PSRAM)
-
 //  xTaskCreate(udp_client_task, "udp_client", 4096, NULL, 5, NULL);
   ESP_LOGI(TAG, "  End of setup()\n\n");
   //@@@esp_ota_mark_app_valid_cancel_rollback(); //set image valid
