@@ -780,7 +780,7 @@ static esp_err_t setWifiParams (httpd_req_t *req)
         ESP_LOGI(TAG, "Found network PASSKEY =%s", passkey);
         strcpy((char *) glob_wifi_config.sta.password, passkey); //C++ does not allow conversion from char[32] to unint8_t[32]
       }
-      //assume both ssid and passw are correctly set
+      //assume both ssid and passw are correctly set @@@may impl via event?
       network_credentials_sta_set = true;
     }
     free(buf);
@@ -1183,6 +1183,7 @@ bool wifi_credentials_stored_in_NVS()
   //You could check if more values are set but only ssid or password is necessary to check against
   //const char * const_ssid = (char *)&glob_wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
   //const char * const_password = (char *)&glob_wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  bool return_value = false;
   size_t nvs_str_size;
   const char * const_password="";
 
@@ -1205,10 +1206,10 @@ bool wifi_credentials_stored_in_NVS()
         ESP_LOGI(TAG, "NVS_SSID = %s\n", ssid);
         //save read ssid into global wifi_config var
         strcpy((char *) glob_wifi_config.sta.ssid, ssid); //C++ does not allow conversion from char[32] to unint8_t[32]
+        return_value = true;
         break;
       case ESP_ERR_NVS_NOT_FOUND:
         ESP_LOGI(TAG, "The value is not initialized yet!\n");
-        return false;
         break;
       default :
         ESP_LOGI(TAG, "Error (%s) reading!\n", esp_err_to_name(err));
@@ -1224,15 +1225,18 @@ bool wifi_credentials_stored_in_NVS()
         ESP_LOGI(TAG, "nvs_password = %s\n", password);
         //save read password into global wifi_config var
         strcpy((char *) glob_wifi_config.sta.password, password); //C++ does not allow conversion from char[32] to unint8_t[32]
+        return_value = true;
         break;
       case ESP_ERR_NVS_NOT_FOUND:
         ESP_LOGI(TAG, "The value is not initialized yet!\n");
-        return false;
+        return_value = false;
         break;
       default :
         ESP_LOGI(TAG, "Error (%s) reading!\n", esp_err_to_name(err));
+        return_value = false;
     }
-
+  nvs_close(my_handle);
+  return return_value; 
   }
   /* else {
     for (int i = 0; i<32; i++)
@@ -1253,11 +1257,12 @@ bool wifi_credentials_stored_in_NVS()
     }*/
     //COND: ssid and passwd have both not length zero, and both don't contain non printable chars
 //    ESP_LOGI(TAG, "Wifi configuration stored in NVS will be used: %s, %s", ssid, const_password);
-    return true;
+    //return true;
   }
 
 void wifi_init_sta(void)
 {
+  ESP_LOGI(TAG, "wifi_init_sta");
   s_wifi_event_group = xEventGroupCreate();
 
   ESP_ERROR_CHECK(esp_netif_init());
@@ -1313,9 +1318,14 @@ void wifi_init_sta(void)
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
-        if (wifi_credentials_stored_in_NVS()) {
-          ESP_LOGI(TAG, "wifi config IS stored in NVS");
-        }
+        //save wifi credentials to NVS
+        nvs_handle_t my_handle;
+        esp_err_t err = nvs_open("storage", NVS_READWRITE, &my_handle);
+        const char * const_ssid = (char *)&glob_wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+        err = nvs_set_str (my_handle, "nvs_ssid", const_ssid); //hier
+        const char * const_password = (char *)&glob_wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+        err = nvs_set_str (my_handle, "nvs_password", const_password); //hier
+        nvs_close(my_handle);
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
