@@ -10,5 +10,7 @@ So this privat.h must be made by you, and shoud contain:
 #define TLG_URL "https://api.telegram.org/bot<secretpart>sendPhoto?chat_id=<chat_id>"
 
 #define EXAMPLE_ESP_WIFI_SSID      "yourssid"
+
 #define EXAMPLE_ESP_WIFI_PASS      "yourpassword"
+
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
