@@ -2,8 +2,20 @@
 Streaming webserver code copied en bewerkt from: https://github.com/jameszah/ESP32-CAM-Video-Recorder-junior/blob/master/ESP32-CAM-Video-Recorder-junior-10x.ino
 
 TODO
-* wifi provisioning, https://docs.espressif.com/projects/esp-jumpstart/en/latest/index.html
-  * complexe (grote code) en additional phone app nodig; ik wil gewoon simpele AP met webinterface
+* store network credentials in NVS; 
+    Store the value of key 'my_key' to NVS 
+    nvs_set_u32(nvs_handle, "my_key", chosen_value);
+
+    Read the value of key 'my_key' from NVS
+    nvs_get_u32(nvs_handle, "my_key", &chosen_value);
+
+    Register 3 second press callback
+    iot_button_add_on_press_cb(btn_handle, 3, button_press_3sec_cb, NULL);
+    static void button_press_3sec_cb(void *arg)
+    {
+      nvs_flash_erase();
+      esp_restart();
+    }
 * AI on EPS32: https://github.com/fustyles/Arduino/blob/master/ESP32-CAM_Tensorflow.js/ESP32-CAM_teachablemachine/ESP32-CAM_teachablemachine.ino
 * AI person detection: https://diyprojects.io/tensorflow-lite-micro-is-available-for-esp32-and-esp32-eye-esp32-cam/
 * https://github.com/espressif/esp-idf/issues/1503
@@ -30,20 +42,6 @@ TODO
 * over the air updates
   * only mark image Valid, as it works OK
 * exception handing, https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/fatal-errors.html
-* store network credentials in NVS; 
-    Store the value of key 'my_key' to NVS 
-    nvs_set_u32(nvs_handle, "my_key", chosen_value);
-
-    Read the value of key 'my_key' from NVS
-    nvs_get_u32(nvs_handle, "my_key", &chosen_value);
-
-    Register 3 second press callback
-    iot_button_add_on_press_cb(btn_handle, 3, button_press_3sec_cb, NULL);
-    static void button_press_3sec_cb(void *arg)
-    {
-      nvs_flash_erase();
-      esp_restart();
-    }
 * custom watchdog - if no internet connection for x seconds; wrsch beter aan wifi_event_handler koppelen
 * maak code netjes
 
@@ -1057,13 +1055,14 @@ static void init_NVS(void)
   // Initialize NVS.
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_LOGE (TAG, "NVS flash init error");
     // OTA app partition table has a smaller NVS partition size than the non-OTA
     // partition table. This size mismatch may cause NVS initialization to fail.
     // If this happens, we erase NVS partition and initialize NVS again.
     ESP_ERROR_CHECK(nvs_flash_erase());
     err = nvs_flash_init();
   }
-  ESP_ERROR_CHECK( err );
+  ESP_ERROR_CHECK(err);
 }
 
 static void configure_PIR(void)
@@ -1175,20 +1174,67 @@ bool wifi_credentials_stored_in_NVS()
 {
   //test whether wifi config is stored in NVS
   //when credentials are valid, they are copied in glob_wifi_config
-  wifi_interface_t interface;
+  //wifi_interface_t interface;
   // result of esp_wifi_get_config does not mean whether wifi credentials are stored in NVS or not
   // you should check the string length of the data coming from the NVS which is typically random
   // 210423 add check whether ssid and password contain only printable characters
-  esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &glob_wifi_config);
+  //ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &glob_wifi_config));
   
   //You could check if more values are set but only ssid or password is necessary to check against
-  const char * const_ssid = (char *)&glob_wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
-  const char * const_password = (char *)&glob_wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  //const char * const_ssid = (char *)&glob_wifi_config.sta.ssid; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  //const char * const_password = (char *)&glob_wifi_config.sta.password; //Convert uint8* to char* to const char * (latest conversion cannot be casted)
+  size_t nvs_str_size;
+  const char * const_password="";
 
-  if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
-    ESP_LOGI(TAG, "Wifi configuration not found in flash partition called NVS.");
+  //if(strlen(const_ssid) == 0 || strlen(const_password) == 0) {
+  ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle... ");
+  nvs_handle_t my_handle;
+  esp_err_t err = nvs_open("storage", NVS_READWRITE, &my_handle);
+  if (err != ESP_OK) {
+    ESP_LOGI(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     return false;
   } else {
+    ESP_LOGI(TAG, "Reading SSID from NVS ... ");
+    err = nvs_get_str(my_handle, "nvs_ssid", NULL, &nvs_str_size);
+    char * ssid = (char *) malloc(nvs_str_size);
+    err = nvs_get_str(my_handle, "nvs_ssid", ssid, &nvs_str_size);
+
+    switch (err) {
+      case ESP_OK:
+        ESP_LOGI(TAG, "Done\n");
+        ESP_LOGI(TAG, "NVS_SSID = %s\n", ssid);
+        //save read ssid into global wifi_config var
+        strcpy((char *) glob_wifi_config.sta.ssid, ssid); //C++ does not allow conversion from char[32] to unint8_t[32]
+        break;
+      case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGI(TAG, "The value is not initialized yet!\n");
+        return false;
+        break;
+      default :
+        ESP_LOGI(TAG, "Error (%s) reading!\n", esp_err_to_name(err));
+    }
+
+    err = nvs_get_str(my_handle, "nvs_password", NULL, &nvs_str_size);
+    char * password = (char *) malloc(nvs_str_size);
+    err = nvs_get_str(my_handle, "nvs_password", password, &nvs_str_size);
+
+    switch (err) {
+      case ESP_OK:
+        ESP_LOGI(TAG, "Done\n");
+        ESP_LOGI(TAG, "nvs_password = %s\n", password);
+        //save read password into global wifi_config var
+        strcpy((char *) glob_wifi_config.sta.password, password); //C++ does not allow conversion from char[32] to unint8_t[32]
+        break;
+      case ESP_ERR_NVS_NOT_FOUND:
+        ESP_LOGI(TAG, "The value is not initialized yet!\n");
+        return false;
+        break;
+      default :
+        ESP_LOGI(TAG, "Error (%s) reading!\n", esp_err_to_name(err));
+    }
+
+  }
+  /* else {
     for (int i = 0; i<32; i++)
     {
         if (!isalnum(const_ssid[i]))
@@ -1204,13 +1250,11 @@ bool wifi_credentials_stored_in_NVS()
           ESP_LOGI(TAG, "passwd in NVS contains non printable chars");
           return false;
         }
-    }
+    }*/
     //COND: ssid and passwd have both not length zero, and both don't contain non printable chars
-    ESP_LOGI(TAG, "Wifi configuration stored in NVS will be used: %s, %s", const_ssid, const_password);
+//    ESP_LOGI(TAG, "Wifi configuration stored in NVS will be used: %s, %s", ssid, const_password);
     return true;
   }
-
-}
 
 void wifi_init_sta(void)
 {
@@ -1269,6 +1313,9 @@ void wifi_init_sta(void)
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        if (wifi_credentials_stored_in_NVS()) {
+          ESP_LOGI(TAG, "wifi config IS stored in NVS");
+        }
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
