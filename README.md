@@ -9,6 +9,9 @@ Software is written with ESP IDF framework version 4.x.
 * when buttn is pressed, a photo is sent to Telegram
 * PIR detection is deactivated, because of false positives
 * OLED displays your name and adress
+* remote logging via UPD port 3333; on linux host: nc -l -u -p 3333
+* OTA (Over The Air) updates via <ip_of_esp>/control
+
 
 **Configuration**
 privat.h in included in main, but not present in this repo
