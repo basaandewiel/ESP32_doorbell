@@ -36,7 +36,7 @@
 						var progress = document.getElementById("progress");
 						progress.textContent = "Progress: " + (e.loaded / e.total * 100).toFixed(0) + "%";
 					};
-					xhr.open("POST", "/update", true);
+					xhr.open("POST", "/update_post", true);
 					xhr.send(file);
 				}
 			}
