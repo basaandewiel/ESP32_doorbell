@@ -5,7 +5,7 @@ Software is written with ESP IDF framework version 4.x.
 
 **Features**
 * When wifi credentials are not yet stored in NVS memory, ESP32 starts up in SoftAP mode
-(open network with SSID ESP); 
+(open network with SSID ESP32); 
 you can give in your SSID and passkey, and ESP32 continues in STA mode, 
 and tries to connect to your network with the credentials supplied
  address of ESP32 in SoftAP mode: 192.168.4.1
