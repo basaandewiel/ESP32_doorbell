@@ -660,9 +660,7 @@ static esp_err_t capture_handler(httpd_req_t *req) {
 
 
 
-/*
- * Serve OTA update portal (index.html)
- */
+// Serve index.html
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 
@@ -749,10 +747,18 @@ esp_err_t rebootESP (httpd_req_t *req)
 	return ESP_OK;
 }
 
+
+
+
+
 /* An HTTP GET handler */
+extern const uint8_t index_html_start[] asm("_binary_index_html_start");
+extern const uint8_t index_html_end[] asm("_binary_index_html_end");
 static esp_err_t setWifiParams (httpd_req_t *req)
 {
   ESP_LOGI(TAG, "setWifiParams");
+	httpd_resp_send(req, (const char *) index_html_start, index_html_end - index_html_start); //present update page
+
   char*  buf;
   size_t buf_len;
 
@@ -781,6 +787,17 @@ static esp_err_t setWifiParams (httpd_req_t *req)
   }
   return ESP_OK;
 }
+
+extern const uint8_t update_html_start[] asm("_binary_update_html_start");
+extern const uint8_t update_html_end[] asm("_binary_update_html_end");
+static esp_err_t update_get_handler (httpd_req_t *req)
+{
+  ESP_LOGI(TAG, "Update_get_handler");
+	httpd_resp_send(req, (const char *) update_html_start, update_html_end - update_html_start); //present update page
+
+  return ESP_OK;
+}
+
 
 
 /* An HTTP GET handler */
@@ -891,7 +908,7 @@ void startCameraServer() {
     .uri       = "/",
     .method    = HTTP_GET,
 //    .handler   = index_handler,
-     .handler = index_get_handler, //handler for OTA update web page
+     .handler = index_get_handler, //present index.html
     .user_ctx  = NULL
   };
   httpd_uri_t capture_uri = {
@@ -914,8 +931,15 @@ void startCameraServer() {
 //    .user_ctx  = NULL
 //  };
 
-  httpd_uri_t update_post = {
+  httpd_uri_t update = {
 	  .uri	  = "/update",
+	  .method   = HTTP_GET,
+	  .handler  = update_get_handler,
+	  .user_ctx = NULL
+  };
+
+  httpd_uri_t update_post = {
+	  .uri	  = "/update_post",
 	  .method   = HTTP_POST,
 	  .handler  = update_post_handler,
 	  .user_ctx = NULL
@@ -936,23 +960,27 @@ void startCameraServer() {
   };
 
   httpd_uri_t setWifiParams_uri = {
-	  .uri	  = "/control",
+	  .uri	  = "/control", //used in index.html to send ssid and password
 	  .method   = HTTP_GET,
 	  .handler  = setWifiParams,
-//for POST	  .user_ctx = NULL
-    .user_ctx = (void *) "Hello Bassie" //is returned after get; 
+	  .user_ctx = NULL
+    //.user_ctx = (void *) "Hello Bassie" //is returned after get; remove because now update.html is returned
     //GET: if nothing is returned then maxfd increases till 64 => crash
   };
 
-  if (httpd_start(&camera_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(camera_httpd, &index_uri);
-    httpd_register_uri_handler(camera_httpd, &capture_uri);
-//    httpd_register_uri_handler(camera_httpd, &stream_uri);
-//    httpd_register_uri_handler(camera_httpd, &photos_uri);
-    httpd_register_uri_handler(camera_httpd, &update_post);
-    httpd_register_uri_handler(camera_httpd, &sendtelegram_uri);
-    httpd_register_uri_handler(camera_httpd, &reboot_uri);
-    httpd_register_uri_handler(camera_httpd, &setWifiParams_uri);
+  //if camera_httpd <> NULL, then httpd server is already started 
+  if (camera_httpd == NULL) {
+    if (httpd_start(&camera_httpd, &config) == ESP_OK) {
+      httpd_register_uri_handler(camera_httpd, &index_uri);
+      httpd_register_uri_handler(camera_httpd, &capture_uri);
+  //    httpd_register_uri_handler(camera_httpd, &stream_uri);
+  //    httpd_register_uri_handler(camera_httpd, &photos_uri);
+      httpd_register_uri_handler(camera_httpd, &update_post);
+      httpd_register_uri_handler(camera_httpd, &update);
+      httpd_register_uri_handler(camera_httpd, &sendtelegram_uri);
+      httpd_register_uri_handler(camera_httpd, &reboot_uri);
+      httpd_register_uri_handler(camera_httpd, &setWifiParams_uri);
+    }
   }
   ESP_LOGI(TAG, "HTTP server started");
 }
@@ -1359,19 +1387,14 @@ void app_main()
     wifi_init_softap();
     //start httpd server, so that wifi creds can be inputted
     startCameraServer(); //camera streaming server; framebuffer is used in sendalert2telegram, so stream URL MUST be activated (fi via browser)
-    //baswi replaced ps_malloc by malloc; so probably not in PSRAM, seen https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
-    //Because in settings (SDK config editor) " make ram allocatable by malloc" this is OK
-    //baswi remove type cast from (uint8_t*)malloc
-    //  framebuffer = (uint8_t*)malloc(size_t(512 * 1024)); // buffer to store a jpg in motion
-    //  framebuffer = (uint8_t*)malloc(size_t(1200 * 1600)); // changed size to UXVGA, 1600x1200
-    framebuffer = (uint8_t*)malloc(size_t(1600 * 1200)); // changed size to UXVGA, 1600x1200 = 1,9 MB; SKD config editor: max 16K placed in
-    //internal RAM, if bigger then in SPIRAM (=PSRAM)
 
     while (network_credentials_sta_set == false) {
+      ESP_LOGI(TAG, "waiting for wifi credentials");
       vTaskDelay(1000/portTICK_PERIOD_MS);
     }
-    // network credentials received via webpage
-    //unregister and destory netif object, because sta uses other netif object
+    ESP_LOGI(TAG, "network credentials received via webpage, and stored in glob_");
+    // httpd_stop(&camera_httpd); //this does not work; so check before starting httpd server whether it is already running
+    ESP_LOGI(TAG, "unregister and destory netif object, because sta uses other netif object");
     esp_wifi_clear_default_wifi_driver_and_handlers(esp_netif_handler); //unregister default wifi handlers and detach the created object from the wifi
     esp_netif_destroy(esp_netif_handler); //To destroy the esp_netif object.
   }
@@ -1387,6 +1410,15 @@ void app_main()
   esp_wifi_set_ps(WIFI_PS_NONE);
 
   init_udp_client();
+
+  startCameraServer(); //camera streaming server; framebuffer is used in sendalert2telegram, so stream URL MUST be activated (fi via browser)
+  //baswi replaced ps_malloc by malloc; so probably not in PSRAM, seen https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/external-ram.html
+  //Because in settings (SDK config editor) " make ram allocatable by malloc" this is OK
+  //baswi remove type cast from (uint8_t*)malloc
+  //  framebuffer = (uint8_t*)malloc(size_t(512 * 1024)); // buffer to store a jpg in motion
+  //  framebuffer = (uint8_t*)malloc(size_t(1200 * 1600)); // changed size to UXVGA, 1600x1200
+  framebuffer = (uint8_t*)malloc(size_t(1600 * 1200)); // changed size to UXVGA, 1600x1200 = 1,9 MB; SKD config editor: max 16K placed in
+  //internal RAM, if bigger then in SPIRAM (=PSRAM)
 
   struct tm timeinfo;
   time(&now);
