@@ -21,3 +21,7 @@ So this privat.h must be made by you, and shoud contain:
 #define EXAMPLE_ESP_WIFI_PASS      "yourpassword"
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
+
+#define FAM_NAME "family name"
+
+#define FAM_ADDRESS "address of family"
