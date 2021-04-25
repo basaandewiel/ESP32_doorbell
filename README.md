@@ -8,6 +8,7 @@ Software is written with ESP IDF framework version 4.x.
 * video stream is avaliable at <ip_of_esp>/capture - can for instance be used in motion running on raspberry pi
 * when buttn is pressed, a photo is sent to Telegram
 * PIR detection is deactivated, because of false positives
+* OLED displays your name and adress
 
 **Configuration**
 privat.h in included in main, but not present in this repo
