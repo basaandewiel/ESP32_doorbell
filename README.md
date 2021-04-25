@@ -1,17 +1,20 @@
 # ESP32_doorbell
 
-This is a videodoorbell running on TTGO T-Camera a ESP32 based development board.
+This is a video doorbell running on TTGO T-Camera, a ESP32 based development board.
 Software is written with ESP IDF framework version 4.x.
 
 **Features**
-* When wifi credentials are not yet stored in NVS memory, ESP32 starts up in SoftAP mode (open network with SSID ESP); you can give in your SSID and passkey, and ESP32 continues in STA mode, and tries to connect to your network
-  address of EPS32: 192.168.4.1
-* video stream is avaliable at <ip_of_esp>/capture - can for instance be used in motion running on raspberry pi
-* when buttn is pressed, a photo is sent to Telegram
-* PIR detection is deactivated, because of false positives
-* OLED displays your name and adress
-* remote logging via UPD port 3333; on linux host: nc -l -u -p 3333
-* OTA (Over The Air) updates via <ip_of_esp>/control
+* When wifi credentials are not yet stored in NVS memory, ESP32 starts up in SoftAP mode
+(open network with SSID ESP); 
+you can give in your SSID and passkey, and ESP32 continues in STA mode, 
+and tries to connect to your network with the credentials supplied
+ address of ESP32 in SoftAP mode: 192.168.4.1
+* video stream is avaliable at <ip_of_esp>/capture - can for instance be used in motion running on raspberry pi to do motion detection
+* when the button on TTYGO T-Camera is pressed, a photo is sent to Telegram (see configuration below)
+* PIR detection is deactivated, because of too many false positives
+* OLED displays your name and adress (see configuration below)
+* remote logging is enabled, so you can debug even when not connected to laptop; UPD port 3333; on linux host: nc -l -u -p 3333 
+* OTA (Over The Air) updates supported via <ip_of_esp>/update; select the bin file and select upload
 
 
 **Configuration**
@@ -29,3 +32,6 @@ So this privat.h must be made by you, and shoud contain:
 #define FAM_NAME "family name"
 
 #define FAM_ADDRESS "address of family"
+
+**Known bugs**
+Sometimes booting does not succeed (hangs at Oled initialisation), and device reboots
