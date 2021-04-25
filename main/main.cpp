@@ -128,9 +128,9 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #define scl GPIO_NUM_22 //baswi changed from 19
 #define sda GPIO_NUM_21 //baswi changed from 18
 
-#include "privat.h" //include private defines, in .gitignore@@@
+#include "privat.h" //include private defines, in .gitignore, see README
 
-//baswi pins for TTGO T-camera
+//pins for TTGO T-camera - adapt when you use another device
 #define CAM_PIN_PWDN    -1 //power down is not used
 #define CAM_PIN_RESET   -1 //software reset will be performed
 #define CAM_PIN_XCLK    4
@@ -159,7 +159,6 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfi
 #define ESP_WIFI_SOFTAP_PASS      "" //open network
 #define ESP_WIFI_SOFTAP_CHANNEL   11
 #define ESP_WIFI_SOFTAP_MAX_STA_CONN       4
-
 
 static const char *TAG = "***";
 static void obtain_time(void);
@@ -222,8 +221,6 @@ static camera_config_t camera_config = {
 
 static EventGroupHandle_t wifi_event_group;
 
-
-bool wifi_has_ip = false;
 bool sendAlert2Telegram = false;
 bool streamer_paused = false;
 
@@ -1401,7 +1398,6 @@ void app_main()
   // COND: either wifi credentials in NVS were valid, or are supplied via softAP
   wifi_init_sta(); //start wifi in STA mode, with credentials saved in NVS
 
-  wifi_has_ip = true;
   sprintf(localip, "192.168.1.165"); //@@@should not be hard coded
   //ESP_LOGI(TAG, "Connected to AP");
   /* Ensure to disable any WiFi power save mode, this allows best throughput
