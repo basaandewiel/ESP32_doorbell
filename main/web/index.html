@@ -1,165 +1,32 @@
-<!DOCTYPE html> 
-
+<!DOCTYPE HTML>
 <html>
-	<head>
-		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-		<title>ESP32 OTA Update</title>
-		<script>
-			function startUpload() {
-				var otafile = document.getElementById("otafile").files;
+<head>
+<meta content="text/html; charset=ISO-8859-1"
+http-equiv="content-type">
+<meta name = "viewport" content = "width = device-width, initial-scale = 1.0, maximum-scale = 1.0, user-scalable=0">
+<title>ESP32 Demo</title>
+<style>
+body { background-color: #0067B3  ; font-family: Arial, Helvetica, Sans-Serif; Color: #FFFFFF; }
+</style>
+</head>
+<body>
+<center>
+<h1 style="color:#FFFFFF; font-family:verdana;font-family: verdana;padding-top: 10px;padding-bottom: 10px;font-size: 36px">ESP32 Captive Portal</h1>
+<h2 style="color:#FFFFFF;font-family: Verdana;font: caption;font-size: 27px;padding-top: 10px;padding-bottom: 10px;">Give Your WiFi Credentials</h2>
+<FORM action="/control" method="get">
+<P ><label style="font-family:Times New Roman">SSID</label><br><input maxlength="30px" type='text' id="ssid_wifi" name="ssid" placeholder='Enter WiFi SSID' style="width: 400px; padding: 5px 10px ; margin: 8px 0; border : 2px solid #3498db; border-radius: 4px; box-sizing:border-box" ><br></P>
+<P><label style="font-family:Times New Roman">PASSKEY</label><br><input maxlength="30px" type = "text" id="pass_wifi" name="passkey"  placeholder = "Enter WiFi PASSKEY" style="width: 400px; padding: 5px 10px ; margin: 8px 0; border : 2px solid #3498db; border-radius: 4px; box-sizing:border-box" ><br><P>
+<input type="checkbox" name="configure" value="change"> Change IP Settings </P>
+<BR>
+<INPUT type="submit"><INPUT type="reset">
+<style>
+input[type="reset"]{background-color: #3498DB; border: none; color: white; padding:  15px 48px; text-align: center; text-decoration: none;display: inline-block; font-size: 16px;}
+input[type="submit"]{background-color: #3498DB; border: none; color: white; padding:  15px 48px;text-align: center; text-decoration: none;display: inline-block;font-size: 16px;}
+</style>
+</FORM>
+</center>
+</body>
 
-				if (otafile.length == 0) {
-					alert("No file selected!");
-				} else {
-					document.getElementById("otafile").disabled = true;
-					document.getElementById("upload").disabled = true;
 
-					var file = otafile[0];
-					var xhr = new XMLHttpRequest();
-					xhr.onreadystatechange = function() {
-						if (xhr.readyState == 4) {
-							if (xhr.status == 200) {
-								document.open();
-								document.write(xhr.responseText);
-								document.close();
-							} else if (xhr.status == 0) {
-								alert("Server closed the connection abruptly!");
-								location.reload()
-							} else {
-								alert(xhr.status + " Error!\n" + xhr.responseText);
-								location.reload()
-							}
-						}
-					};
 
-					xhr.upload.onprogress = function (e) {
-						var progress = document.getElementById("progress");
-						progress.textContent = "Progress: " + (e.loaded / e.total * 100).toFixed(0) + "%";
-					};
-					xhr.open("POST", "/update", true);
-					xhr.send(file);
-				}
-			}
-			function sendTelegram() {
-				// 1. Create a new XMLHttpRequest object
-				let xhr = new XMLHttpRequest();
-
-				// 2. Configure it: GET-request for the URL
-				xhr.open('GET', '/telegram');
-
-				// 3. Send the request over the network
-				xhr.send();
-			}
-
-			function reboot() {
-				// 1. Create a new XMLHttpRequest object
-				let xhr = new XMLHttpRequest();
-
-				// 2. Configure it: GET-request for the URL
-				xhr.open('GET', '/reboot');
-
-				// 3. Send the request over the network
-				xhr.send();
-			}
-
-			function setloglevel() {
-				var level = document.getElementById("llevel").value;
-				// 1. Create a new XMLHttpRequest object
-				let http = new XMLHttpRequest();
-				var url = '/setloglevel';
-				//var params = 'orem=ipsum&name=binny';
-				http.open('POST', url, true);
-
-				//Send the proper header information along with the request
-				http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-
-				http.onreadystatechange = function() {//Call a function when the state changes.
-	    			if(http.readyState == 4 && http.status == 200) {
-    	    			alert(http.responseText);
-    				}
-				}
-				http.send(level);
-			}
-
-			"use strict";
-			function submitForm(oFormElement)
-			{
-  				var xhr = new XMLHttpRequest();
-  				xhr.onload = function(){ alert (xhr.responseText); } // success case
-  				xhr.onerror = function(){ alert (xhr.responseText); } // failure case
-  				xhr.open (oFormElement.method, oFormElement.action, true);
-  				xhr.send (new FormData (oFormElement));
-  				return false;
-			}
-
-			function setleveldebug() {
-				let xhr = new XMLHttpRequest();
-				xhr.open('GET', '/setlogleveldebug');
-				xhr.send();
-			}
-			function setlevelinfo() {
-				let xhr = new XMLHttpRequest();
-				xhr.open('GET', '/setloglevelinfo');
-				xhr.send();
-			}
-
-		
-		</script>
-	</head>
-	<body>
-		<h1>ESP32 OTA Firmware Update</h1>
-		<div>
-			<button id="Telegram" type="Telegram" onclick="sendTelegram()">Telegram</button>
-		</div>
-		<div>
-			<button id="Reboot" type="Reboot" onclick="reboot()">reboot</button>
-		</div>
-		
-		<div>
-			<label for="otafile">Firmware file:</label>
-			<input type="file" id="otafile" name="otafile" />
-		</div>
-		<div>
-			<button id="upload" type="button" onclick="startUpload()">Upload</button>
-		</div>
-		<div id="progress"></div>
-
-		<p>Set log level</p>
-		This is an example text that won't be displayed in the browser
-		<form>
-			<input type="radio" id="llevel" name="debug" value="Ddebug">
-			<label for="debug">Debug</label><br>
-			<input type="radio" id="llevel" name="info" value="Iinfo">
-			<label for="info">Info</label><br>
-			<button id="submit" type="button" onclick="setloglevel()">Submit</button>
-		</form>
-		
-
-		<form id="loglevel" enctype="application/x-www-form-urlencoded" method="post" action="setloglevel" onsubmit="return submitForm(this);">
-			<input type="radio"  value="ESP_LOG_NONE"   name="llevel" />
-			<input type="radio"  value="ESP_LOG_ERROR" name="llevel" />
-			<input type="radio"  value="ESP_LOG_WARN"   name="llevel" />
-			<input type="radio"  value="ESP_LOG_INFO"   name="llevel" />
-			<input type="radio"  value="ESP_LOG_DEBUG" name="llevel" />
-			<input type="radio"  value="ESP_LOG_VERBOSE" name="llevel" />
-			<input type="submit" value="post request"/>
-		  </form>
-
-		  
-		<form id="mainForm" name="mainForm">
-			<input type="radio" name="rads" value="1" />
-			<input type="radio" name="rads" value="2" />
-			<input type="radio" name="rads" value="3" />
-			<input type="radio" name="rads" value="4" />
-		</form>
-		<span id="result"></span>
-
-		<form action="/urlencoded?llevel=sid" method="POST" enctype="application/x-www-form-urlencoded">
-			<input type="radio" name="llevel" value="sidthesloth"/>
-			<input type="radio" name="llevel" value="slothsecret"/>
-			<input type="submit" value="Submit" />
-		</form>
-		
-
-	</body>
-</html>
+.
