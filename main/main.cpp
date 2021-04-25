@@ -3,12 +3,6 @@ Streaming webserver code copied en bewerkt from: https://github.com/jameszah/ESP
 
 TODO
 * store network credentials in NVS; 
-    Store the value of key 'my_key' to NVS 
-    nvs_set_u32(nvs_handle, "my_key", chosen_value);
-
-    Read the value of key 'my_key' from NVS
-    nvs_get_u32(nvs_handle, "my_key", &chosen_value);
-
     Register 3 second press callback
     iot_button_add_on_press_cb(btn_handle, 3, button_press_3sec_cb, NULL);
     static void button_press_3sec_cb(void *arg)
@@ -1427,8 +1421,8 @@ void app_main()
   OLED display = OLED(ssd1306);
   display.select_font(1).clear();
   display.draw_string(0, 0, "Fam", WHITE, BLACK); 
-  display.draw_string(0, display.font_height(), "aan de Wiel", WHITE, BLACK); 
-  display.draw_string(0, 2*display.font_height(), "Zadkinestraat 126", WHITE, BLACK); 
+  display.draw_string(0, display.font_height(), FAM_NAME, WHITE, BLACK); 
+  display.draw_string(0, 2*display.font_height(), FAM_ADDRESS, WHITE, BLACK); 
   display.draw_string(90, 4*display.font_height(), CONFIG_APP_PROJECT_VER, WHITE, BLACK); 
   display.refresh();
   //vTaskDelay(100);
