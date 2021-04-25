@@ -5,6 +5,7 @@ Software is written with ESP IDF framework version 4.x.
 
 **Features**
 * When wifi credentials are not yet stored in NVS memory, ESP32 starts up in SoftAP mode (open network with SSID ESP); you can give in your SSID and passkey, and ESP32 continues in STA mode, and tries to connect to your network
+  address of EPS32: 192.168.4.1
 * video stream is avaliable at <ip_of_esp>/capture - can for instance be used in motion running on raspberry pi
 * when buttn is pressed, a photo is sent to Telegram
 * PIR detection is deactivated, because of false positives
