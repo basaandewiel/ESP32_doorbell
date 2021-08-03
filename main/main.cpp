@@ -207,7 +207,7 @@ static camera_config_t camera_config = {
     .ledc_channel = LEDC_CHANNEL_0,
 
     .pixel_format = PIXFORMAT_JPEG, //YUV422,GRAYSCALE,RGB565,JPEG
-    .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+    .frame_size = FRAMESIZE_QVGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
     //FRAMESIZE_SXGA works OK (motion+telegram)
     //UXGA gives mbed_tls failures; don't know why
 //    .frame_size = FRAMESIZE_UXGA,    //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
@@ -643,18 +643,18 @@ static esp_err_t capture_handler(httpd_req_t *req) {
   if (streamer_paused == false) { //do NOT get new fb when I try to send current framebuffer to Telegram
     ESP_LOGD(TAG, "Capture_handler: Getting camera fb");
     fb = esp_camera_fb_get();
-    framebuffer_len = fb->len;                                            
-    memcpy(framebuffer, fb->buf, framebuffer_len);                                           
-    esp_camera_fb_return(fb);
+    if (fb != NULL) { //210803 added
+      framebuffer_len = fb->len;                                            
+      memcpy(framebuffer, fb->buf, framebuffer_len);                                           
+      esp_camera_fb_return(fb);
 
-    httpd_resp_set_type(req, "image/jpeg");
-    httpd_resp_set_hdr(req, "Content-Disposition", fname);
-                                                                     
-    res = httpd_resp_send(req, (const char *)framebuffer, framebuffer_len);
+      httpd_resp_set_type(req, "image/jpeg");
+      httpd_resp_set_hdr(req, "Content-Disposition", fname);
+      res = httpd_resp_send(req, (const char *)framebuffer, framebuffer_len);
+    }                                                                   
   }
   return res;
 }
-
 
 
 // Serve index.html
