@@ -21,7 +21,7 @@ and tries to connect to your network with the credentials supplied
 privat.h in included in main, but not present in this repo
 So this privat.h must be made by you, and shoud contain:
 
-'''
+
 #define TLG_TOKEN "Telegram token to send photo to"
 #define TLG_URL "https://api.telegram.org/bot<secretpart>sendPhoto?chat_id=<chat_id>"
 #define EXAMPLE_ESP_WIFI_SSID      "yourssid"
@@ -29,7 +29,7 @@ So this privat.h must be made by you, and shoud contain:
 #define EXAMPLE_ESP_MAXIMUM_RETRY  5
 #define FAM_NAME "family name"
 #define FAM_ADDRESS "address of family"
-'''
+
  
 **Known bugs**
 Sometimes booting does not succeed (hangs at Oled initialisation), and device reboots
