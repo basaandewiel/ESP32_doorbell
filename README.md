@@ -1,6 +1,6 @@
 # ESP32_doorbell
 
-This is a video doorbell running on TTGO T-Camera, a ESP32 based development board.
+This is a video doorbell running on TTGO T-Camera, an ESP32 based development board.
 Software is written with ESP IDF framework version 4.x.
 
 **Features**
